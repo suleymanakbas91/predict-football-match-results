@@ -3,9 +3,6 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Map;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-
 import static spark.Spark.*;
 import spark.template.freemarker.FreeMarkerEngine;
 import spark.ModelAndView;
@@ -20,7 +17,11 @@ public class Main {
     port(Integer.valueOf(System.getenv("PORT")));
     staticFileLocation("/public");
 
-    get("/hello", (req, res) -> "Hello World");
+    get("/hello", (req, res) -> {
+        String result = Model.getFixtures();
+        
+        return result;    
+    });
 
     get("/", (request, response) -> {
             Map<String, Object> attributes = new HashMap<>();
