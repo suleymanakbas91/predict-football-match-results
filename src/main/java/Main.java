@@ -17,7 +17,7 @@ public class Main {
     port(Integer.valueOf(System.getenv("PORT")));
     staticFileLocation("/public");
 
-    get("/hello", (req, res) -> {
+    get("/fixtures", (req, res) -> {
         String result = Model.getFixturesHtml();
         
         return result;    

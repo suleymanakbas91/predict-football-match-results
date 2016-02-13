@@ -13,6 +13,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.annotations.SerializedName;
 import java.text.SimpleDateFormat;
+import java.util.TimeZone;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -107,8 +108,9 @@ public class Model {
         sb.append("<th> Draws </th>");  
         sb.append("<th> Away Team Wins </th>");  
         
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy hh:mm zzz");       
-               
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm z");
+        dateFormat.setTimeZone(TimeZone.getTimeZone("GMT+2"));
+        
         for(Fixture fixture:fixtures) {  
             Team homeTeam = null;
             Team awayTeam = null;
@@ -128,10 +130,7 @@ public class Model {
             int awayTeamMarketValue = Integer.parseInt(awayTeam.squadMarketValue.substring(0, awayTeam.squadMarketValue.length()-2).replace(",", ""));
             
             double homeTeamWinProbability = calculateHomeTeamProbability(homeTeamMarketValue, awayTeamMarketValue);
-                        
-            homeTeamWinProbability = (double) (homeTeamWinProbability * 200 / 3);
-            
-            System.out.println(homeTeamWinProbability);
+            homeTeamWinProbability = (double) (homeTeamWinProbability * 200 / 3);   
             String homeTeamWin = String.format("%.1f", homeTeamWinProbability) + "%";
             
             double awayTeamWinProbability = calculateAwayTeamProbability(homeTeamMarketValue, awayTeamMarketValue);
@@ -202,14 +201,9 @@ public class Model {
         String shortName;
         String squadMarketValue;
         String crestUrl;
-        //Fixture[] fixtures;
         
         @SerializedName("_links")
         Links links;
-        
-        //public void setFixtures(Fixture[] fixtures) {
-          //  this.fixtures = fixtures;
-        //}
 
         public static Team[] createTeams(String json) {
             Gson gson = new Gson();
@@ -219,8 +213,6 @@ public class Model {
             
             Team[] teams = gson.fromJson(teamsArray, Team[].class);
 
-            //Fixture.addFixtureToTeams(teams);
-            
             return teams;
         }
     }
