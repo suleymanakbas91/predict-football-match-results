@@ -18,7 +18,7 @@ public class Main {
     staticFileLocation("/public");
 
     get("/hello", (req, res) -> {
-        String result = Model.getFixtures();
+        String result = Model.getFixturesHtml();
         
         return result;    
     });
