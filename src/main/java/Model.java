@@ -32,8 +32,9 @@ public class Model {
         String result = "";
         
         Team[] teams = getTeams();
-        Fixture[] fixtures = getFixtures();
-        result = createHtml(teams, fixtures);
+        Fixture[] thisWeeksFixtures = getThisWeeksFixtures();
+        Fixture[] lastWeeksFixtures = getLastWeeksFixtures();
+        result = createHtml(teams, thisWeeksFixtures, lastWeeksFixtures);
              
         return result;
     }
@@ -66,7 +67,7 @@ public class Model {
         return teams;
     }
     
-    public static Fixture[] getFixtures() {
+    public static Fixture[] getThisWeeksFixtures() {
         String response = "";
         try {            
             URL url = new URL("http://api.football-data.org/v1/fixtures/?league=PL");
@@ -90,8 +91,35 @@ public class Model {
         return fixtures;
     }
     
-    public static String createHtml(Team[] teams, Fixture[] fixtures) {        
-                
+    public static Fixture[] getLastWeeksFixtures() {
+        String response = "";
+        try {            
+            URL url = new URL("http://api.football-data.org/v1/fixtures/?league=PL&timeFrame=p14");
+            
+            URLConnection connection = url.openConnection();
+            connection.setRequestProperty("X-Auth-Token", TOKEN);
+            BufferedReader in = new BufferedReader(
+                                    new InputStreamReader(
+                                    connection.getInputStream()));    
+            String inputLine;
+            while ((inputLine = in.readLine()) != null) 
+                response += inputLine;
+            in.close();
+        } catch (MalformedURLException ex) {
+            //Logger.getLogger(ModelCreation.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            //Logger.getLogger(ModelCreation.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        Fixture[] fixtures = Fixture.createFixtures(response);
+        return fixtures;
+    }
+    
+    public static String createHtml(Team[] teams, Fixture[] thisWeeksFixtures, Fixture[] lastWeeksFixtures) {        
+        //Set date format
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm z");
+        dateFormat.setTimeZone(TimeZone.getTimeZone("GMT+2"));
+            
         StringBuilder sb = new StringBuilder();
         sb.append("<html>");
         sb.append("<head>");
@@ -100,58 +128,136 @@ public class Model {
             "th { background: #333; color: white; font-weight: bold; padding: 6px; border: 1px solid #ccc; text-align: left;}" +
             "</style>");
         sb.append("</head><body>");
-        sb.append("<table>");
-        sb.append("<th> Date </th>");
-        sb.append("<th> Home Team </th>");
-        sb.append("<th> Away Team </th>");  
-        sb.append("<th> Home Team Wins </th>");  
-        //sb.append("<th> Draws </th>");  
-        sb.append("<th> Away Team Wins </th>");  
         
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm z");
-        dateFormat.setTimeZone(TimeZone.getTimeZone("GMT+2"));
-        
-        for(Fixture fixture:fixtures) {  
-            Team homeTeam = null;
-            Team awayTeam = null;
-            for(Team team:teams) {
-                if (team.name.equals(fixture.homeTeamName)) {
-                    homeTeam = team;
-                } else if (team.name.equals(fixture.awayTeamName)) {
-                    awayTeam = team;
-                }     
+        if (thisWeeksFixtures.length <= 0) {
+            sb.append("<h2>There is not any match to predict this week. :(</h2>");   
+        } else {
+            sb.append("<h2>This Week</h2>");
+            sb.append("<table>");
+            sb.append("<th> Date </th>");
+            sb.append("<th> Home Team </th>");
+            sb.append("<th> Away Team </th>");  
+            sb.append("<th> Home Team Wins </th>");  
+            sb.append("<th> Away Team Wins </th>");  
+
+            for(Fixture fixture:thisWeeksFixtures) {  
+                Team homeTeam = null;
+                Team awayTeam = null;
+                for(Team team:teams) {
+                    if (team.name.equals(fixture.homeTeamName)) {
+                        homeTeam = team;
+                    } else if (team.name.equals(fixture.awayTeamName)) {
+                        awayTeam = team;
+                    }     
+                }
+
+                if (homeTeam == null || awayTeam == null){
+                    break;
+                }
+
+                int homeTeamMarketValue = Integer.parseInt(homeTeam.squadMarketValue.substring(0, homeTeam.squadMarketValue.length()-2).replace(",", ""));
+                int awayTeamMarketValue = Integer.parseInt(awayTeam.squadMarketValue.substring(0, awayTeam.squadMarketValue.length()-2).replace(",", ""));
+
+                double homeTeamWinProbability = calculateHomeTeamProbability(homeTeamMarketValue, awayTeamMarketValue);
+                homeTeamWinProbability = (double) (homeTeamWinProbability * 100);   
+                String homeTeamWin = String.format("%.1f", homeTeamWinProbability) + "%";
+
+                double awayTeamWinProbability = calculateAwayTeamProbability(homeTeamMarketValue, awayTeamMarketValue);
+                awayTeamWinProbability = (double) (awayTeamWinProbability * 100);
+                String awayTeamWin = String.format("%.1f", awayTeamWinProbability) + "%";
+
+                sb.append("<tr>");
+                sb.append("<td> ").append(dateFormat.format(fixture.date)).append(" </td>");
+                sb.append("<td> ").append(fixture.homeTeamName).append(" </td>");
+                sb.append("<td> ").append(fixture.awayTeamName).append(" </td>");
+                sb.append("<td> ").append(homeTeamWin).append(" </td>");
+                sb.append("<td> ").append(awayTeamWin).append(" </td>");
+                sb.append("</tr>");
             }
-            
-            if (homeTeam == null || awayTeam == null){
-                break;
-            }
-            
-            int homeTeamMarketValue = Integer.parseInt(homeTeam.squadMarketValue.substring(0, homeTeam.squadMarketValue.length()-2).replace(",", ""));
-            int awayTeamMarketValue = Integer.parseInt(awayTeam.squadMarketValue.substring(0, awayTeam.squadMarketValue.length()-2).replace(",", ""));
-            
-            double homeTeamWinProbability = calculateHomeTeamProbability(homeTeamMarketValue, awayTeamMarketValue);
-            homeTeamWinProbability = (double) (homeTeamWinProbability * 100);   
-            String homeTeamWin = String.format("%.1f", homeTeamWinProbability) + "%";
-            
-            double awayTeamWinProbability = calculateAwayTeamProbability(homeTeamMarketValue, awayTeamMarketValue);
-            awayTeamWinProbability = (double) (awayTeamWinProbability * 100);
-            String awayTeamWin = String.format("%.1f", awayTeamWinProbability) + "%";
-                         
-//            double drawProbabilityDb = (double) 1/3 * 100;
-//            String draw = String.format("%.1f", drawProbabilityDb) + "%";
-            
-            sb.append("<tr>");
-            sb.append("<td> ").append(dateFormat.format(fixture.date)).append(" </td>");
-            sb.append("<td> ").append(fixture.homeTeamName).append(" </td>");
-            sb.append("<td> ").append(fixture.awayTeamName).append(" </td>");
-            sb.append("<td> ").append(homeTeamWin).append(" </td>");
-            //sb.append("<td> ").append(draw).append(" </td>");
-            sb.append("<td> ").append(awayTeamWin).append(" </td>");
-            sb.append("</tr>");
-            
+            sb.append("</table>");
         }
         
-        sb.append("</table>");
+        if(lastWeeksFixtures.length <= 0) {
+            sb.append("<h2>There was not any match to predict last week. :(</h2>");   
+        } else {
+            //Show last week's fixture.
+            sb.append("<h2>Last Week</h2>");
+            sb.append("<table>");
+            sb.append("<th> Date </th>");
+            sb.append("<th> Home Team </th>");
+            sb.append("<th> Away Team </th>");  
+            sb.append("<th> Result </th>");  
+            sb.append("<th> Home Team Wins </th>");          
+            sb.append("<th> Away Team Wins </th>");  
+
+            double successRate = 0;
+            int countWithoutDraws = 0;
+            for(Fixture fixture:lastWeeksFixtures) {  
+                Team homeTeam = null;
+                Team awayTeam = null;
+                for(Team team:teams) {
+                    if (team.name.equals(fixture.homeTeamName)) {
+                        homeTeam = team;
+                    } else if (team.name.equals(fixture.awayTeamName)) {
+                        awayTeam = team;
+                    }     
+                }
+
+                if (homeTeam == null || awayTeam == null){
+                    break;
+                }
+
+                int homeTeamMarketValue = Integer.parseInt(homeTeam.squadMarketValue.substring(0, homeTeam.squadMarketValue.length()-2).replace(",", ""));
+                int awayTeamMarketValue = Integer.parseInt(awayTeam.squadMarketValue.substring(0, awayTeam.squadMarketValue.length()-2).replace(",", ""));
+
+                double homeTeamWinProbability = calculateHomeTeamProbability(homeTeamMarketValue, awayTeamMarketValue);
+                homeTeamWinProbability = (double) (homeTeamWinProbability * 100);   
+                String homeTeamWin = String.format("%.1f", homeTeamWinProbability) + "%";
+
+                double awayTeamWinProbability = calculateAwayTeamProbability(homeTeamMarketValue, awayTeamMarketValue);
+                awayTeamWinProbability = (double) (awayTeamWinProbability * 100);
+                String awayTeamWin = String.format("%.1f", awayTeamWinProbability) + "%";
+
+                sb.append("<tr>");
+                sb.append("<td> ").append(dateFormat.format(fixture.date)).append(" </td>");
+                sb.append("<td> ").append(fixture.homeTeamName).append(" </td>");
+                sb.append("<td> ").append(fixture.awayTeamName).append(" </td>");
+                sb.append("<td> ").append(fixture.result.goalsHomeTeam).append("-").append(fixture.result.goalsAwayTeam).append(" </td>");
+                
+                if (fixture.result.goalsHomeTeam > fixture.result.goalsAwayTeam) {
+                    successRate += homeTeamWinProbability;
+                    countWithoutDraws++;
+                    if (homeTeamWinProbability > awayTeamWinProbability) {
+                        sb.append("<td><b> ").append(homeTeamWin).append(" </b></td>"); 
+                        sb.append("<td> ").append(awayTeamWin).append(" </td>");
+                    } else {
+                        sb.append("<td> ").append(homeTeamWin).append(" </td>");
+                        sb.append("<td> ").append(awayTeamWin).append(" </td>");
+                    } 
+                } else if (fixture.result.goalsHomeTeam < fixture.result.goalsAwayTeam) {
+                    successRate += awayTeamWinProbability;
+                    countWithoutDraws++;
+                    if (homeTeamWinProbability < awayTeamWinProbability) {
+                        sb.append("<td> ").append(homeTeamWin).append(" </td>"); 
+                        sb.append("<td><b> ").append(awayTeamWin).append(" </b></td>");
+                    } else {
+                        sb.append("<td> ").append(homeTeamWin).append(" </td>");
+                        sb.append("<td> ").append(awayTeamWin).append(" </td>");
+                    }
+                } else {
+                    sb.append("<td> ").append(homeTeamWin).append(" </td>");
+                    sb.append("<td> ").append(awayTeamWin).append(" </td>");
+                }              
+                
+                sb.append("</tr>");
+            }
+            sb.append("</table>");
+            
+            successRate = (double) successRate / countWithoutDraws;
+            String successRateStr = String.format("%.2f", successRate) + "%";
+            sb.append("<h3> Success Rate: ").append(successRateStr).append(" </h3>");
+        }
+        
         sb.append("</body>");
         sb.append("</html>");
         
@@ -171,7 +277,7 @@ public class Model {
         
         return (double) awayTeamGoalPrediction / (homeTeamGoalPrediction + awayTeamGoalPrediction);
     }
-
+    
     public static class Fixture {
         Links _links;
         Date date;
