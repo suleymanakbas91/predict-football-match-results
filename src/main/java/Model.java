@@ -105,7 +105,7 @@ public class Model {
         sb.append("<th> Home Team </th>");
         sb.append("<th> Away Team </th>");  
         sb.append("<th> Home Team Wins </th>");  
-        sb.append("<th> Draws </th>");  
+        //sb.append("<th> Draws </th>");  
         sb.append("<th> Away Team Wins </th>");  
         
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm z");
@@ -130,22 +130,22 @@ public class Model {
             int awayTeamMarketValue = Integer.parseInt(awayTeam.squadMarketValue.substring(0, awayTeam.squadMarketValue.length()-2).replace(",", ""));
             
             double homeTeamWinProbability = calculateHomeTeamProbability(homeTeamMarketValue, awayTeamMarketValue);
-            homeTeamWinProbability = (double) (homeTeamWinProbability * 200 / 3);   
+            homeTeamWinProbability = (double) (homeTeamWinProbability * 100);   
             String homeTeamWin = String.format("%.1f", homeTeamWinProbability) + "%";
             
             double awayTeamWinProbability = calculateAwayTeamProbability(homeTeamMarketValue, awayTeamMarketValue);
-            awayTeamWinProbability = (double) (awayTeamWinProbability * 200 / 3);
+            awayTeamWinProbability = (double) (awayTeamWinProbability * 100);
             String awayTeamWin = String.format("%.1f", awayTeamWinProbability) + "%";
                          
-            double drawProbabilityDb = (double) 1/3 * 100;
-            String draw = String.format("%.1f", drawProbabilityDb) + "%";
+//            double drawProbabilityDb = (double) 1/3 * 100;
+//            String draw = String.format("%.1f", drawProbabilityDb) + "%";
             
             sb.append("<tr>");
             sb.append("<td> ").append(dateFormat.format(fixture.date)).append(" </td>");
             sb.append("<td> ").append(fixture.homeTeamName).append(" </td>");
             sb.append("<td> ").append(fixture.awayTeamName).append(" </td>");
             sb.append("<td> ").append(homeTeamWin).append(" </td>");
-            sb.append("<td> ").append(draw).append(" </td>");
+            //sb.append("<td> ").append(draw).append(" </td>");
             sb.append("<td> ").append(awayTeamWin).append(" </td>");
             sb.append("</tr>");
             
@@ -185,10 +185,8 @@ public class Model {
             Gson gson = new Gson();
             JsonParser parser = new JsonParser();
             JsonObject object = (JsonObject)parser.parse(json);
-            //JsonElement countElement = object.get("count");
             JsonArray teamsArray = (JsonArray) object.get("fixtures");
 
-            //int count = gson.fromJson(countElement, Integer.class); 
             Fixture[] fixtures = gson.fromJson(teamsArray, Fixture[].class);
             
             return fixtures;
