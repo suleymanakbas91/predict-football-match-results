@@ -94,7 +94,7 @@ public class Model {
     public static Fixture[] getLastWeeksFixtures() {
         String response = "";
         try {            
-            URL url = new URL("http://api.football-data.org/v1/fixtures/?league=PL&timeFrame=p14");
+            URL url = new URL("http://api.football-data.org/v1/fixtures/?league=PL&timeFrame=p7");
             
             URLConnection connection = url.openConnection();
             connection.setRequestProperty("X-Auth-Token", TOKEN);
@@ -255,7 +255,7 @@ public class Model {
             
             successRate = (double) successRate / countWithoutDraws;
             String successRateStr = String.format("%.2f", successRate) + "%";
-            sb.append("<h3> Success Rate: ").append(successRateStr).append(" </h3>");
+            sb.append("<h3> Success: ").append(successRateStr).append(" </h3>");
         }
         
         sb.append("</body>");
