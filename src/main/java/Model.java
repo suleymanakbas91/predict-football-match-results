@@ -222,8 +222,13 @@ public class Model {
                 sb.append("<td> ").append(dateFormat.format(fixture.date)).append(" </td>");
                 sb.append("<td> ").append(fixture.homeTeamName).append(" </td>");
                 sb.append("<td> ").append(fixture.awayTeamName).append(" </td>");
-                sb.append("<td> ").append(fixture.result.goalsHomeTeam).append("-").append(fixture.result.goalsAwayTeam).append(" </td>");
                 
+                if (fixture.status.equals("FINISHED")) {
+                    sb.append("<td> ").append(fixture.result.goalsHomeTeam).append("-").append(fixture.result.goalsAwayTeam).append(" </td>");
+                } else {
+                    sb.append("<td> ").append(fixture.status).append(" </td>");
+                }
+                                
                 if (fixture.result.goalsHomeTeam > fixture.result.goalsAwayTeam) {
                     successRate += homeTeamWinProbability;
                     countWithoutDraws++;
@@ -255,7 +260,7 @@ public class Model {
             
             successRate = (double) successRate / countWithoutDraws;
             String successRateStr = String.format("%.2f", successRate) + "%";
-            sb.append("<h3> Success: ").append(successRateStr).append(" </h3>");
+            sb.append("<h3> Success Rate: ").append(successRateStr).append(" </h3>");
         }
         
         sb.append("</body>");
