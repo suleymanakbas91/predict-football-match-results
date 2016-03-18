@@ -1,3 +1,8 @@
+#!
+This is the sample heroku application I built my application on. You can directly reach my main methods for model creation on ModelCreation.java and for applying this model to the online application on src/main/java/Model.java.  
+
+-------------------------------------------------------------------------------------------------------------------------
+
 # java-getting-started
 
 A barebones Java app, which can easily be deployed to Heroku.  
