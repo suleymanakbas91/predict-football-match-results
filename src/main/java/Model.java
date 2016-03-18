@@ -13,6 +13,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.annotations.SerializedName;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.TimeZone;
 
 /*
@@ -158,11 +159,13 @@ public class Model {
                 int homeTeamMarketValue = Integer.parseInt(homeTeam.squadMarketValue.substring(0, homeTeam.squadMarketValue.length()-2).replace(",", ""));
                 int awayTeamMarketValue = Integer.parseInt(awayTeam.squadMarketValue.substring(0, awayTeam.squadMarketValue.length()-2).replace(",", ""));
 
-                double homeTeamWinProbability = calculateHomeTeamProbability(homeTeamMarketValue, awayTeamMarketValue);
+                //double homeTeamWinProbability = calculateHomeTeamProbability(homeTeamMarketValue, awayTeamMarketValue);
+                double homeTeamWinProbability = calculateHomeWinProb(homeTeamMarketValue, awayTeamMarketValue);
+                double awayTeamWinProbability = 1 - homeTeamWinProbability;
                 homeTeamWinProbability = (double) (homeTeamWinProbability * 100);   
                 String homeTeamWin = String.format("%.1f", homeTeamWinProbability) + "%";
 
-                double awayTeamWinProbability = calculateAwayTeamProbability(homeTeamMarketValue, awayTeamMarketValue);
+                //double awayTeamWinProbability = calculateAwayTeamProbability(homeTeamMarketValue, awayTeamMarketValue);
                 awayTeamWinProbability = (double) (awayTeamWinProbability * 100);
                 String awayTeamWin = String.format("%.1f", awayTeamWinProbability) + "%";
 
@@ -190,6 +193,8 @@ public class Model {
             sb.append("<th> Home Team Wins </th>");          
             sb.append("<th> Away Team Wins </th>");  
 
+            ArrayList<Double> predictions = new ArrayList();
+            ArrayList<Double> actuals = new ArrayList();
             double successRate = 0;
             int countWithoutDraws = 0;
             for(Fixture fixture:lastWeeksFixtures) {  
@@ -210,13 +215,15 @@ public class Model {
                 int homeTeamMarketValue = Integer.parseInt(homeTeam.squadMarketValue.substring(0, homeTeam.squadMarketValue.length()-2).replace(",", ""));
                 int awayTeamMarketValue = Integer.parseInt(awayTeam.squadMarketValue.substring(0, awayTeam.squadMarketValue.length()-2).replace(",", ""));
 
-                double homeTeamWinProbability = calculateHomeTeamProbability(homeTeamMarketValue, awayTeamMarketValue);
-                homeTeamWinProbability = (double) (homeTeamWinProbability * 100);   
-                String homeTeamWin = String.format("%.1f", homeTeamWinProbability) + "%";
+                //double homeTeamWinProbability = calculateHomeTeamProbability(homeTeamMarketValue, awayTeamMarketValue);
+                double homeTeamWinProbability = calculateHomeWinProb(homeTeamMarketValue, awayTeamMarketValue);
+                double awayTeamWinProbability = 1 - homeTeamWinProbability;
+                double homeTeamWinProbabilityPercent = (double) (homeTeamWinProbability * 100);   
+                String homeTeamWin = String.format("%.1f", homeTeamWinProbabilityPercent) + "%";
 
-                double awayTeamWinProbability = calculateAwayTeamProbability(homeTeamMarketValue, awayTeamMarketValue);
-                awayTeamWinProbability = (double) (awayTeamWinProbability * 100);
-                String awayTeamWin = String.format("%.1f", awayTeamWinProbability) + "%";
+                //double awayTeamWinProbability = calculateAwayTeamProbability(homeTeamMarketValue, awayTeamMarketValue);
+                double awayTeamWinProbabilityPercent = (double) (awayTeamWinProbability * 100);
+                String awayTeamWin = String.format("%.1f", awayTeamWinProbabilityPercent) + "%";
 
                 sb.append("<tr>");
                 sb.append("<td> ").append(dateFormat.format(fixture.date)).append(" </td>");
@@ -230,7 +237,9 @@ public class Model {
                 }
                                 
                 if (fixture.result.goalsHomeTeam > fixture.result.goalsAwayTeam) {
-                    successRate += homeTeamWinProbability;
+                    predictions.add(homeTeamWinProbability);
+                    actuals.add(1.0);
+                    //successRate += homeTeamWinProbability;
                     countWithoutDraws++;
                     if (homeTeamWinProbability > awayTeamWinProbability) {
                         sb.append("<td><b> ").append(homeTeamWin).append(" </b></td>"); 
@@ -240,7 +249,9 @@ public class Model {
                         sb.append("<td> ").append(awayTeamWin).append(" </td>");
                     } 
                 } else if (fixture.result.goalsHomeTeam < fixture.result.goalsAwayTeam) {
-                    successRate += awayTeamWinProbability;
+                    predictions.add(homeTeamWinProbability);
+                    actuals.add(0.0);
+                    //successRate += awayTeamWinProbability;
                     countWithoutDraws++;
                     if (homeTeamWinProbability < awayTeamWinProbability) {
                         sb.append("<td> ").append(homeTeamWin).append(" </td>"); 
@@ -258,15 +269,37 @@ public class Model {
             }
             sb.append("</table>");
             
-            successRate = (double) successRate / countWithoutDraws;
+            successRate = calculateMeanSquaredError(actuals, predictions) * 100;
+            //successRate = (double) successRate / countWithoutDraws;
             String successRateStr = String.format("%.2f", successRate) + "%";
-            sb.append("<h3> Success Rate: ").append(successRateStr).append(" </h3>");
+            sb.append("<h3> Error Rate: ").append(successRateStr).append(" </h3>");
         }
         
         sb.append("</body>");
         sb.append("</html>");
         
         return sb.toString();
+    }
+    
+    public static double calculateHomeWinProb(int homeTeamMarketValue, int awayTeamMarketValue) {
+        double prediction = 0.5622255342802198 + (1.0682845275289186E-9 * homeTeamMarketValue) + (-9.24614306976538E-10 * awayTeamMarketValue);
+        if (prediction > 1) {
+            prediction = 1;
+        } else if (prediction < 0) {
+            prediction = 0;
+        }        
+        return prediction;
+    }
+    
+    public static double calculateMeanSquaredError(ArrayList<Double> actuals, ArrayList<Double> predictions) {
+       int size = actuals.size();
+       double sum_sq = 0;
+       for (int i = 0; i < size; i++) {
+           double err = predictions.get(i) - actuals.get(i);
+           sum_sq += (err*err);
+       }
+       double mse = (double) sum_sq / size;
+       return mse;
     }
     
     public static double calculateHomeTeamProbability(int homeTeamMarketValue, int awayTeamMarketValue) {
